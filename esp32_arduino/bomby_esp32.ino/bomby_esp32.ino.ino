@@ -1,29 +1,6 @@
 /*
- WiFi Web Server LED Blink
-
- A simple web server that lets you blink an LED via the web.
- This sketch will print the IP address of your WiFi Shield (once connected)
- to the Serial monitor. From there, you can open that address in a web browser
- to turn on and off the LED on pin 5.
-
- If the IP address of your shield is yourAddress:
- http://yourAddress/H turns the LED on
- http://yourAddress/L turns it off
-
- This example is written for a network using WPA encryption. For
- WEP or WPA, change the Wifi.begin() call accordingly.
-
- Circuit:
- * WiFi shield attached
- * LED attached to pin 5
-
- created for arduino 25 Nov 2012
- by Tom Igoe
-
-ported for sparkfun esp32 
-31.01.2017 by Jan Hendrik Berlin
- 
- */
+  
+*/
 
 #include <WiFi.h>
 #include <ArduinoJson.h>
@@ -33,61 +10,75 @@ const char* password = "ironman32";
 
 //WiFiServer server(80);
 WiFiServer server(5005);
+const int trigPin = 15;
+const int echoPin = 5;
+const int inBoardLed = 2;
+const int anotherPin = 13;
+
+
+// distance sensor variable
+int  sensorPin =  0;
+long duration;
+int distance;
+
 
 void setup()
 {
-    Serial.begin(115200);
-    pinMode(13, OUTPUT);      // set the LED pin mode
-    pinMode(2,OUTPUT);    // status pin inboard
-    delay(20);
+  Serial.begin(115200);
+
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  pinMode(anotherPin, OUTPUT);      // set the LED pin mode
+  pinMode(inBoardLed, OUTPUT);   // status pin inboard
+  delay(20);
 
 
-    // We start by connecting to a WiFi network
-digitalWrite(2, HIGH);
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  // We start by connecting to a WiFi network
+  digitalWrite(inBoardLed, HIGH);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-    WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-        if (digitalRead(2) == LOW)
-          {
-            digitalWrite(2, HIGH);
-          }
-          else{
-            digitalWrite(2, LOW);
-            }
-        /*TODO:
-          1. offer a default wifi connection and then change it to
-          a customized network, by asking the user to input ssid and password
-*/
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    if (digitalRead(inBoardLed) == LOW)
+    {
+      digitalWrite(inBoardLed, HIGH);
     }
+    else {
+      digitalWrite(inBoardLed, LOW);
+    }
+    /*TODO:
+      1. offer a default wifi connection and then change it to
+      a customized network, by asking the user to input ssid and password
+    */
+  }
 
-    Serial.println("");
-    Serial.println("WiFi connected.");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-    digitalWrite(2, LOW);
-    
-    server.begin();
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  digitalWrite(inBoardLed, LOW);
+
+  server.begin();
 
 }
 int number = 0;
 int value = 0;
 
-void loop(){
- WiFiClient client = server.available();   // listen for incoming clients
+void loop() {
+  WiFiClient client = server.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
-    digitalWrite(2, HIGH);
-    number = number+1;
+    digitalWrite(inBoardLed, HIGH);
+    number = number + 1;
     Serial.println("New Client.");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
-    String request= "";
+    String request = "";
     while (client.connected()) {            // loop while the client's connected
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
@@ -97,47 +88,49 @@ void loop(){
           // that's the end of the client HTTP request, so send a response:
           if (currentLine.length() == 0) {
 
-    // Allocate JsonBuffer
-  // Use arduinojson.org/assistant to compute the capacity.
-  StaticJsonBuffer<500> jsonBuffer;
+            // Allocate JsonBuffer
+            // Use arduinojson.org/assistant to compute the capacity.
+            StaticJsonBuffer<500> jsonBuffer;
 
-  // Create the root object
-  JsonObject& root = jsonBuffer.createObject();
+            // Create the root object
+            JsonObject& root = jsonBuffer.createObject();
 
-  // Create the "analog" array
-  JsonArray& analogValues = root.createNestedArray("analog");
-  for (int pin = 0; pin < 5; pin++) {
-    // Read the analog input
-    int value = pin;
+            // Create the "analog" array
+            JsonArray& analogValues = root.createNestedArray("analog");
+            for (int pin = 0; pin < 5; pin++) {
+              // Read the analog input
+              int value = pin;
 
-    // Add the value at the end of the array
-    analogValues.add(value);
-  }
+              // Add the value at the end of the array
+              analogValues.add(value);
+            }
 
-  // Create the "digital" array
-  JsonArray& digitalValues = root.createNestedArray("digital");
-  for (int pin = 4; pin > 0; pin--) {
-    // Read the digital input
-    int value = pin;
+            // Create the "digital" array
+            JsonArray& digitalValues = root.createNestedArray("digital");
+            for (int pin = 4; pin > 0; pin--) {
+              // Read the digital input
+              int value = pin;
 
-    // Add the value at the end of the array
-    digitalValues.add(value);
-  }
-  root["numero"] = number;
-  root["request"] = request;
-  
-  Serial.print(F("Sending: "));
-  root.printTo(Serial);
-  Serial.println();
+              // Add the value at the end of the array
+              digitalValues.add(value);
+            }
+            root["numero"] = number;
+            root["request"] = request;
+            root["dist"] = getDistance();
 
-  // Write response headers
-  client.println("HTTP/1.0 200 OK");
-  client.println("Content-Type: application/json");
-  client.println("Connection: close");
-  client.println();
 
-  // Write JSON document
-  root.printTo(client);
+            Serial.print(F("Sending: "));
+            root.printTo(Serial);
+            Serial.println();
+
+            // Write response headers
+            client.println("HTTP/1.0 200 OK");
+            client.println("Content-Type: application/json");
+            client.println("Connection: close");
+            client.println();
+
+            // Write JSON document
+            root.printTo(client);
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -152,33 +145,53 @@ void loop(){
 
         // Check to see what the client request was
         if (currentLine.endsWith("GET /L")) {
-          digitalWrite(13, HIGH);               // GET /H turns the LED on
-        Serial.println("\nL requested: Move left");
-        request = "L requested: Move left";
+          digitalWrite(anotherPin, HIGH);               // GET /H turns the LED on
+          Serial.println("\nL requested: Move left");
+          request = "L requested: Move left";
         }
         else if (currentLine.endsWith("GET /R")) {
-          digitalWrite(13, LOW);                // GET /L turns the LED off
-        Serial.println("\nR requested: Move right");
-        request = "R requested: Move right";
+          digitalWrite(anotherPin, LOW);                // GET /L turns the LED off
+          Serial.println("\nR requested: Move right");
+          request = "R requested: Move right";
         }
-        else if (currentLine.endsWith("GET /S")){
+        else if (currentLine.endsWith("GET /S")) {
           Serial.println("\nS requested: stop");
           request = "S requested: stop";
-          }
-        else if (currentLine.endsWith("GET /B")){
+        }
+        else if (currentLine.endsWith("GET /B")) {
           Serial.println("\nB requested: start");
           request = "B requested: start";
-          }
-       }
+        }
+      }
     }
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");
   }
-  digitalWrite(2, LOW);
+  digitalWrite(inBoardLed, LOW);
 }
 
+int getDistance()
+{
+  digitalWrite(trigPin, LOW);
+delayMicroseconds(2);
 
+// Sets the trigPin on HIGH state for 10 micro seconds
+digitalWrite(trigPin, HIGH);
+delayMicroseconds(10);
+digitalWrite(trigPin, LOW);
+
+// Reads the echoPin, returns the sound wave travel time in microseconds
+duration = pulseIn(echoPin, HIGH);
+
+// Calculating the distance
+distance= duration*0.034/2;
+
+// Prints the distance on the Serial Monitor
+Serial.print("Distance: ");
+Serial.println(distance);
+return distance;
+  }
 
 //JsonObject& gatherInformation(int num){
 //  // Allocate JsonBuffer
