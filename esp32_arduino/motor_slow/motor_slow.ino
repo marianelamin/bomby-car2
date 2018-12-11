@@ -5,8 +5,8 @@
 
 #define leftFactor 10
 #define rightFactor 10
-#define speedSet  90
-
+#define speedSet  80
+*
 #include <UCMotor.h>
 
 //pin definition
@@ -41,6 +41,8 @@ void loop() {
             {
               Serial.print("ahora esta en LOW");
               prevState = 0;
+              moveForward();
+              delay(500);
               moveNot();
             }
       }
@@ -50,6 +52,8 @@ void loop() {
               Serial.print("ahora esta en HIGH");
               prevState = 1;
               moveForward();
+              delay(500);
+              moveNot();
             }
         delay(10);
       }

@@ -5,8 +5,8 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 
-const char* ssid     = "thor";
-const char* password = "ironman32";
+const char* ssid     = "Min_iPhone";
+const char* password = "123456789";
 
 //WiFiServer server(80);
 WiFiServer server(5005);
@@ -20,7 +20,9 @@ const int anotherPin = 13;
 int  sensorPin =  0;
 long duration;
 int distance;
-
+int prevState =-1;
+int number = 0;
+int value = 0;
 
 void setup()
 {
@@ -67,8 +69,7 @@ pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   server.begin();
 
 }
-int number = 0;
-int value = 0;
+
 
 void loop() {
   WiFiClient client = server.available();   // listen for incoming clients
@@ -80,6 +81,7 @@ void loop() {
     String currentLine = "";                // make a String to hold incoming data from the client
     String request = "";
     while (client.connected()) {            // loop while the client's connected
+      togglePin(inBoardLed);
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
         Serial.write(c);                    // print it out the serial monitor
@@ -145,21 +147,25 @@ void loop() {
 
         // Check to see what the client request was
         if (currentLine.endsWith("GET /L")) {
-          digitalWrite(anotherPin, HIGH);               // GET /H turns the LED on
+//          digitalWrite(anotherPin, HIGH);               // GET /H turns the LED on
           Serial.println("\nL requested: Move left");
           request = "L requested: Move left";
         }
         else if (currentLine.endsWith("GET /R")) {
-          digitalWrite(anotherPin, LOW);                // GET /L turns the LED off
+          
           Serial.println("\nR requested: Move right");
           request = "R requested: Move right";
         }
         else if (currentLine.endsWith("GET /S")) {
           Serial.println("\nS requested: stop");
+          digitalWrite(anotherPin, LOW);
           request = "S requested: stop";
         }
         else if (currentLine.endsWith("GET /B")) {
           Serial.println("\nB requested: start");
+          digitalWrite(anotherPin, HIGH);
+          delay(20);
+          digitalWrite(anotherPin, LOW);
           request = "B requested: start";
         }
       }
@@ -167,8 +173,9 @@ void loop() {
     // close the connection:
     client.stop();
     Serial.println("Client Disconnected.");
+    digitalWrite(inBoardLed, LOW);
   }
-  digitalWrite(inBoardLed, LOW);
+  
 }
 
 int getDistance()
@@ -192,6 +199,16 @@ Serial.print("Distance: ");
 Serial.println(distance);
 return distance;
   }
+
+
+void togglePin(int pin){
+    if(digitalRead(pin) == LOW)
+    digitalWrite(pin, HIGH);
+    else{
+    digitalWrite(pin, LOW);
+    }
+    
+    }
 
 //JsonObject& gatherInformation(int num){
 //  // Allocate JsonBuffer
