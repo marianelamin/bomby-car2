@@ -1,0 +1,9 @@
+
+Instructions:
+
+In order to run this simulation you would have to run first the vrep and then run the bomby_vrep.py file with three arguments: time in secods fot the simulation followed by the ip address on which vrep is running and the port used for the sockets connection (5005).
+
+$> python bomby_vrep.py 70 127.0.0.1 5005
+
+if you have any questions, you know where contact me.
+Mari,
